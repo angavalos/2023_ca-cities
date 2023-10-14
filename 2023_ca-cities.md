@@ -1,0 +1,118 @@
+---
+title: "2023 CA Cities"
+author: "Angel Avalos"
+date: "2023-10-14"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+# 2023 CA Cities named by Angel and Emily in 10 minutes.
+
+### Import packages and set working directory.
+
+##### R
+
+```r
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+library(reticulate)
+library(ggplot2)
+library(maps)
+library(dplyr)
+```
+
+##### Python
+
+```python
+import pandas as pd
+import numpy as np
+import os
+```
+
+### Maps
+
+```python
+latlong = pd.read_csv("data/uscities.csv")
+latlong=latlong[latlong["state_id"]=="CA"]
+# Angel
+angel = pd.read_csv("data/angel.csv")
+angel.replace("Angels Camp","Angels",inplace=True)
+angel.replace("Hilmar","Hilmar-Irwin",inplace=True)
+angel.replace("City of Industry","Industry",inplace=True)
+angel.replace("Puente","La Puente",inplace=True)
+angel.replace("Carmel","Carmel-by-the-Sea",inplace=True)
+angellist = [i for i in angel["Angel"]]
+angellatlong= latlong[latlong["city"].isin(angellist)]
+angelnot= [i for i in angellist if i not in angellatlong["city"].to_list()]
+
+# Emily
+emily=pd.read_csv("data/emily.csv")
+emily.replace("Hilmar","Hilmar-Irwin",inplace=True)
+emily.replace("Puente","La Puente",inplace=True)
+emily.replace("Lake Tahoe","Sunnyside-Tahoe City",inplace=True)
+emilylist = [i for i in emily["Emily"]]
+emilylatlong= latlong[latlong["city"].isin(emilylist)]
+emilynot= [i for i in emilylist if i not in emilylatlong["city"].to_list()]
+
+#Intersections
+both = angellatlong[angellatlong["city"].isin(emilylist)]
+both["status"]="Both"
+```
+
+```
+## <string>:1: SettingWithCopyWarning: 
+## A value is trying to be set on a copy of a slice from a DataFrame.
+## Try using .loc[row_indexer,col_indexer] = value instead
+## 
+## See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+```
+
+```python
+angelunique = angellatlong[~angellatlong["city"].isin(emilylist)]
+angelunique["status"]="Unique to Angel"
+```
+
+```
+## <string>:1: SettingWithCopyWarning: 
+## A value is trying to be set on a copy of a slice from a DataFrame.
+## Try using .loc[row_indexer,col_indexer] = value instead
+## 
+## See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+```
+
+```python
+emilyunique = emilylatlong[~emilylatlong["city"].isin(angellist)]
+emilyunique["status"]="Unique to Emily"
+```
+
+```
+## <string>:1: SettingWithCopyWarning: 
+## A value is trying to be set on a copy of a slice from a DataFrame.
+## Try using .loc[row_indexer,col_indexer] = value instead
+## 
+## See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+```
+
+```python
+final = pd.concat([both,angelunique,emilyunique])
+```
+
+
+```r
+states = map_data("state")
+ca_df = states %>% filter(region == "california")
+counties = map_data("county")
+ca_counties = counties %>% filter(region == "california")
+final=py$final
+col=c("#226f50","#774177","#ff6700")
+
+ggplot(data=ca_df, aes(x=long,y=lat,group=group)) +
+  coord_quickmap() +
+  geom_polygon(color="black",fill="gray") +
+  geom_polygon(data=ca_counties,fill=NA,color="white") +
+  geom_polygon(color="black",fill=NA) +
+  geom_point(data=final, aes(x=lng,y=lat,fill=status,size=population),shape=21,color="black",inherit.aes=FALSE) +
+  scale_fill_manual(values=col)
+```
+
+![](2023_ca-cities_files/figure-html/maps-1.png)<!-- -->
